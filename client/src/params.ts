@@ -1,19 +1,10 @@
-import { randomFromInterval } from './helper';
+import { Tensor, InferenceSession } from 'onnxjs';
 
-export const getRandomOutputParams = () => {
-  const params: OutputParams = {
-    title: null,
-    // key: 8,
-    key: randomFromInterval(1, 12),
-    mode: 6,
-    // mode: Math.random() < 0.5 ? 6 : 1,
-    bpm: randomFromInterval(70, 90),
-    energy: Math.random(),
-    valence: Math.random(),
-    chords: [1, 4, 6, 5, 1, 4, 6, 5],
-    melodies: [] as number[][]
-  };
-  return JSON.stringify(params, null, 2);
+export const session: InferenceSession = new InferenceSession({ backendHint: 'webgl' });
+const url = 'model.onnx';
+
+export const loadModel = () => {
+  session.loadModel(url);
 };
 
 export const HIDDEN_SIZE = 100;
@@ -48,4 +39,50 @@ export class OutputParams {
   chords: number[];
 
   melodies: number[][];
+
+  public constructor(init?: Partial<OutputParams>) {
+    Object.assign(this, init);
+  }
 }
+
+const argmax = (arr: Float32Array) => arr.indexOf(Math.max(...arr));
+
+export const decode2 = async (input: number[]) => {
+  const vec = Float32Array.of(...input);
+  const inputs = [
+    new Tensor(vec, 'float32', [1, 100])
+  ];
+  const outputMap = await session.run(inputs);
+
+  const chords = [];
+  const melodies = [];
+
+  const outputTensors = [...outputMap.values()].map((t) => t.data as Float32Array);
+
+  const maxNumChords = 16;
+
+  for (let i = 0; i < maxNumChords; i += 1) {
+    const chord = argmax(outputTensors[i]);
+    if (chord === 8) break;
+    chords.push(chord);
+    melodies.push(outputTensors.slice(16 + i * 8, 16 + (i + 1) * 8).map((m) => argmax(m)));
+  }
+  const key = argmax(outputTensors[outputTensors.length - 5]) + 1;
+  const mode = argmax(outputTensors[outputTensors.length - 4]) + 1;
+  const bpm = Math.round(outputTensors[outputTensors.length - 3][0]);
+  const energy = parseFloat(outputTensors[outputTensors.length - 2][0].toFixed(3));
+  const valence = parseFloat(outputTensors[outputTensors.length - 1][0].toFixed(3));
+
+  const outputParams = new OutputParams({
+    title: '',
+    key,
+    mode,
+    bpm,
+    valence,
+    energy,
+    chords,
+    melodies
+  });
+
+  return outputParams;
+};

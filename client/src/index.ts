@@ -1,9 +1,11 @@
 import Sortable from 'sortablejs';
 import Player, { RepeatMode } from './player';
 import Producer from './producer';
-import { HIDDEN_SIZE, OutputParams } from './params';
+import { decode2, HIDDEN_SIZE, loadModel, OutputParams } from './params';
 import { decompress, randn } from './helper';
 import { decode } from './api';
+
+loadModel();
 
 const player = new Player();
 
@@ -95,13 +97,18 @@ generateButton.addEventListener('click', async () => {
 
   const numberArray = sliders.map((n) => n.valueAsNumber);
 
-  let params;
-  try {
-    params = await decode(numberArray);
-  } catch (err) {
-    generateButton.textContent = 'Error!';
-    return;
-  }
+  const gain = player.gain?.gain.value;
+
+  if (gain) player.gain.gain.value = 0;
+  const params = await decode2(numberArray);
+  if (gain) player.gain.gain.value = gain;
+  console.log(params);
+  //   console.log(params);
+  // } catch (err) {
+  //   generateButton.textContent = 'Error!';
+  //   console.log(err);
+  //   return;
+  // }
   const producer = new Producer();
   const track = producer.produce(params);
   player.addToPlaylist(track);
