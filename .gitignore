@@ -15,6 +15,9 @@ embedding*.json
 log.txt
 model/*.png
 model/midi_out
+/json_out
+/midi_out
+/model/wandb
 
 # Checkpoints
 checkpoints
