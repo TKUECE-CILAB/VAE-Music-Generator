@@ -34,8 +34,8 @@ def file_emotion_classfier(dir_path):
 
         with open(file_path) as f:
             file_json = json.load(f)
-            emotion = to_Emotion(file_json['audio_features']['valence'],
-                                 file_json['audio_features']['energy'])
+            emotion = to_Emotion(file_json['audio_features']['energy'],
+                                 file_json['audio_features']['valence'])
 
             save_path = os.path.join(pe, emotion, file) 
             with open(save_path, 'w') as out_f:
